@@ -4,7 +4,8 @@ var mongoose = require('mongoose'),
     Schema = mongoose.Schema;
 
 var StockSchema = new Schema({
-  name: String,
+  symbol: String,
+  data: Object,
   info: String,
   active: Boolean
 });
