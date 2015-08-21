@@ -4,6 +4,10 @@ angular.module('workspaceApp')
   .controller('MainCtrl', function ($scope, $http, socket) {
     $scope.awesomeThings = [];
     
+    var graphData = {}; //move variable and functions to service
+    var labels = ['Date'];
+    var view = "Closing Price";
+    
     var dateToString = function(date){
        var yyyy = date.getFullYear().toString();
        var mm = (date.getMonth()+1).toString();
@@ -11,58 +15,90 @@ angular.module('workspaceApp')
        return yyyy + '-' + (mm[1]?mm:"0" + mm[0]) + '-' + (dd[1]?dd:"0"+dd[0]); // padding
     };
     
-    var today = new Date();
-    var yesterday = new Date(today);
-    var lastYear = new Date(today);
-    yesterday.setDate(today.getDate() - 1);
-    lastYear.setDate(today.getDate() - 365);
     
-
-    console.log(dateToString(yesterday));
-    // Define variables
-    $scope.graphData = [];
-    var symbol = 'AAPL';
-    var startDate = dateToString(lastYear);
-    var endDate = dateToString(yesterday);
+    //url examples - save for later
     $scope.example = 'https://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo.finance.historicaldata' +
     '%20where%20symbol%20%3D%20%22AAPL%22%20and%20startDate%20%3D%20%222012-09-11%22%20and%20'+
     'endDate%20%3D%20%222014-02-11%22&format=json&diagnostics=true&env=store%3A%2F%2Fdatatables.org%2F'+
-    'alltableswithkeys&callback='
+    'alltableswithkeys&callback=';
     
     $scope.live = 'http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo.finance.quotes%20where%20symbol%20in%20(%22AAPL%22)&format=json&env=store://datatables.org/alltableswithkeys&callback=';
     $scope.googleLive = 'http://finance.google.com/finance/info?client=ig&q=NASDAQ:GOOG,NASDAQ:YHOO,NASDAQ:AAPL';
     
+    getGraph('AAPL');
+    getGraph('GOOG');
+    getGraph('TSLA');
+    getGraph('FB');
     
-    var query = 'select * from yahoo.finance.historicaldata where symbol = "' + symbol + '" and startDate = "' + startDate + '" and endDate = "' + endDate + '"';
-    var yqlAPI = 'https://query.yahooapis.com/v1/public/yql?q=' + encodeURIComponent(query) + '&format=json&diagnostics=true&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys&callback=';
-    $scope.url = yqlAPI;
+    function getGraph(symbol) {
+      var today = new Date();
+      var yesterday = new Date(today);
+      var lastYear = new Date(today);
+      yesterday.setDate(today.getDate() - 1);
+      lastYear.setDate(today.getDate() - 365);
+      
+      var startDate = dateToString(lastYear);
+      var endDate = dateToString(yesterday);
+      var query = 'select * from yahoo.finance.historicaldata where symbol = "' + symbol + '" and startDate = "' + startDate + '" and endDate = "' + endDate + '"';
+      var yqlAPI = 'https://query.yahooapis.com/v1/public/yql?q=' + encodeURIComponent(query) + '&format=json&diagnostics=true&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys&callback=';
+      $scope.url = yqlAPI; //not needed
+      
+      $.getJSON(yqlAPI, function(r) {
+          //TODO: save json with ticker symbol model
+          
+          //add json to graph
+          drawGraphs(parseGraphData(r, view));
+      });
+    }
     
-    $.getJSON(yqlAPI, function(r) {
-        var symbol = r.query.results.quote[0].Symbol;
+    function parseGraphData(graphJson, view){
+      //TODO: make graphJson an array
+      var startingValue = graphJson.query.results.quote[graphJson.query.results.quote.length -1].Close;
+      
+      graphJson.query.results.quote.forEach(function(data){
+        if (labels.indexOf(data.Symbol) === -1){
+          labels.push(data.Symbol);
+        }
+        if (!graphData[data.Date]) {
+          graphData[data.Date] = [ new Date(data.Date) ];
+        } 
+        if (view === 'Closing Price') {
+          graphData[data.Date].push( parseFloat(data.Close) );
+        } else if (view === 'Percent Change') {
+          graphData[data.Date].push( ((parseFloat(data.Close) - startingValue) / startingValue) * 100 );
+        }
         
-        r.query.results.quote.forEach(function(data, i){
-          $scope.graphData.push([new Date(data.Date), parseFloat(data.Close)]);
-        });
-        console.log($scope.graphData);
-        console.log($scope.graphData[0][0]);
-        console.log(r);
-        
-        //generate graph
-        var g2 = new Dygraph(document.getElementById("graphdiv2"),
-          $scope.graphData.reverse() ,
-            {
-              labels: ['Date', symbol],
-              title: 'Stock Prices',
-              ylabel: 'Price',
-              legend: 'always',
-              labelsDivStyles: { 'textAlign': 'right' },
-              showRangeSelector: true,
-              rangeSelectorPlotStrokeColor: '#9BDBED',
-              rangeSelectorPlotFillColor: '#CAEFFA'
-              
-            }          
-          );
-    });
+      });
+      console.log(graphData);
+      console.log(labels);
+      console.log(graphJson);
+      
+      var graphs = [];
+      for (var row in graphData) {
+        graphs.push(graphData[row]);
+      }
+      graphs = graphs.reverse();
+      console.log(graphs);
+      return graphs;
+    }
+    
+    function drawGraphs(graphData) {
+      
+          
+      var g2 = new Dygraph(document.getElementById("graphdiv2"),
+              graphData ,
+              {
+                labels: labels,
+                title: view,
+                ylabel: 'Value',
+                legend: 'always',
+                labelsDivStyles: { 'textAlign': 'right' },
+                showRangeSelector: true,
+                rangeSelectorPlotStrokeColor: '#9BDBED',
+                rangeSelectorPlotFillColor: '#CAEFFA'
+                
+              });
+    }
     
     
     $http.get('/api/things').success(function(awesomeThings) {
