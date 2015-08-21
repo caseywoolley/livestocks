@@ -10,53 +10,53 @@
 'use strict';
 
 var _ = require('lodash');
-var Thing = require('./thing.model');
+var Stock = require('./stock.model');
 
 // Get list of things
 exports.index = function(req, res) {
-  Thing.find(function (err, things) {
+  Stock.find(function (err, things) {
     if(err) { return handleError(res, err); }
     return res.status(200).json(things);
   });
 };
 
-// Get a single thing
+// Get a single stock
 exports.show = function(req, res) {
-  Thing.findById(req.params.id, function (err, thing) {
+  Stock.findById(req.params.id, function (err, stock) {
     if(err) { return handleError(res, err); }
-    if(!thing) { return res.status(404).send('Not Found'); }
-    return res.json(thing);
+    if(!stock) { return res.status(404).send('Not Found'); }
+    return res.json(stock);
   });
 };
 
-// Creates a new thing in the DB.
+// Creates a new stock in the DB.
 exports.create = function(req, res) {
-  Thing.create(req.body, function(err, thing) {
+  Stock.create(req.body, function(err, stock) {
     if(err) { return handleError(res, err); }
-    return res.status(201).json(thing);
+    return res.status(201).json(stock);
   });
 };
 
-// Updates an existing thing in the DB.
+// Updates an existing stock in the DB.
 exports.update = function(req, res) {
   if(req.body._id) { delete req.body._id; }
-  Thing.findById(req.params.id, function (err, thing) {
+  Stock.findById(req.params.id, function (err, stock) {
     if (err) { return handleError(res, err); }
-    if(!thing) { return res.status(404).send('Not Found'); }
-    var updated = _.merge(thing, req.body);
+    if(!stock) { return res.status(404).send('Not Found'); }
+    var updated = _.merge(stock, req.body);
     updated.save(function (err) {
       if (err) { return handleError(res, err); }
-      return res.status(200).json(thing);
+      return res.status(200).json(stock);
     });
   });
 };
 
-// Deletes a thing from the DB.
+// Deletes a stock from the DB.
 exports.destroy = function(req, res) {
-  Thing.findById(req.params.id, function (err, thing) {
+  Stock.findById(req.params.id, function (err, stock) {
     if(err) { return handleError(res, err); }
-    if(!thing) { return res.status(404).send('Not Found'); }
-    thing.remove(function(err) {
+    if(!stock) { return res.status(404).send('Not Found'); }
+    stock.remove(function(err) {
       if(err) { return handleError(res, err); }
       return res.status(204).send('No Content');
     });

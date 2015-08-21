@@ -2,19 +2,11 @@
 
 angular.module('workspaceApp')
   .controller('MainCtrl', function ($scope, $http, socket) {
-    $scope.awesomeThings = [];
+    $scope.stocks = [];
     
     var graphData = {}; //move variable and functions to service
     var labels = ['Date'];
-    var view = "Closing Price";
-    
-    var dateToString = function(date){
-       var yyyy = date.getFullYear().toString();
-       var mm = (date.getMonth()+1).toString();
-       var dd  = date.getDate().toString();
-       return yyyy + '-' + (mm[1]?mm:"0" + mm[0]) + '-' + (dd[1]?dd:"0"+dd[0]); // padding
-    };
-    
+    var view = "Percent Change";
     
     //url examples - save for later
     $scope.example = 'https://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo.finance.historicaldata' +
@@ -24,6 +16,15 @@ angular.module('workspaceApp')
     
     $scope.live = 'http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo.finance.quotes%20where%20symbol%20in%20(%22AAPL%22)&format=json&env=store://datatables.org/alltableswithkeys&callback=';
     $scope.googleLive = 'http://finance.google.com/finance/info?client=ig&q=NASDAQ:GOOG,NASDAQ:YHOO,NASDAQ:AAPL';
+    
+    
+    
+    var dateToString = function(date){
+       var yyyy = date.getFullYear().toString();
+       var mm = (date.getMonth()+1).toString();
+       var dd  = date.getDate().toString();
+       return yyyy + '-' + (mm[1]?mm:"0" + mm[0]) + '-' + (dd[1]?dd:"0"+dd[0]); // padding
+    };
     
     getGraph('AAPL');
     getGraph('GOOG');
@@ -69,28 +70,36 @@ angular.module('workspaceApp')
         }
         
       });
-      console.log(graphData);
-      console.log(labels);
-      console.log(graphJson);
+      
       
       var graphs = [];
       for (var row in graphData) {
         graphs.push(graphData[row]);
       }
       graphs = graphs.reverse();
+      /*
+      console.log(labels);
+      console.log(graphData);
+      console.log(graphJson);
       console.log(graphs);
+      */
       return graphs;
     }
     
     function drawGraphs(graphData) {
-      
-          
       var g2 = new Dygraph(document.getElementById("graphdiv2"),
               graphData ,
               {
                 labels: labels,
-                title: view,
-                ylabel: 'Value',
+                strokeWidth: 1,
+                //title: view,
+                ylabel: view,
+                axes: {
+                  x: {
+                    //axisLabelFormatter: function(d) { return d.getFullYear() },
+                    valueFormatter: function(ms) { return new Date(ms) }
+                  }
+                },
                 legend: 'always',
                 labelsDivStyles: { 'textAlign': 'right' },
                 showRangeSelector: true,
@@ -100,25 +109,26 @@ angular.module('workspaceApp')
               });
     }
     
+  
     
-    $http.get('/api/things').success(function(awesomeThings) {
-      $scope.awesomeThings = awesomeThings;
-      socket.syncUpdates('thing', $scope.awesomeThings);
+    $http.get('/api/stocks').success(function(stocks) {
+      $scope.stocks = stocks;
+      socket.syncUpdates('stock', $scope.stocks);
     });
 
-    $scope.addThing = function() {
-      if($scope.newThing === '') {
+    $scope.addStock = function() {
+      if($scope.newStock === '') {
         return;
       }
-      $http.post('/api/things', { name: $scope.newThing });
-      $scope.newThing = '';
+      $http.post('/api/stocks', { name: $scope.newStock });
+      $scope.newStock = '';
     };
 
-    $scope.deleteThing = function(thing) {
-      $http.delete('/api/things/' + thing._id);
+    $scope.deleteStock = function(stock) {
+      $http.delete('/api/stocks/' + stock._id);
     };
 
     $scope.$on('$destroy', function () {
-      socket.unsyncUpdates('thing');
+      socket.unsyncUpdates('stock');
     });
   });
